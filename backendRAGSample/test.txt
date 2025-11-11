@@ -1,0 +1,16 @@
+What is Artificial Intelligence? (AI)
+
+Artificial Intelligence, or AI, is about making computers think and learn like humans. It's the field of computer science dedicated to solving cognitive problems commonly associated with human intelligence, such as learning, problem-solving, and pattern recognition.
+
+How Does AI Work?
+
+AI systems use algorithms (sets of rules or instructions) and a lot of data to find patterns, make decisions, and solve problems.
+
+Machine Learning (ML): This is the most common way AI works today. Instead of being explicitly programmed for every task, the computer is given a lot of data and learns to find patterns and make predictions on its own.
+
+Example: Showing a computer thousands of pictures of cats and dogs until it can correctly identify a new picture as either a cat or a dog.
+
+Deep Learning (DL): A subfield of ML that uses structures called neural networks
+
+with many layers to process complex data like images, speech, and text. This is what powers self-driving cars and advanced language models.
+
