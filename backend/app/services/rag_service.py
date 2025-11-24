@@ -4,7 +4,7 @@ from app.models.document import Document
 from app.models.chat import ChatMessage
 from app.services.vector_store import get_vector_store
 from app.services.llm_service import LLMService
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncGenerator
 
 class RAGService:
     def __init__(self, db: AsyncSession):
@@ -79,3 +79,53 @@ class RAGService:
         await self.db.refresh(chat_message)
         
         return chat_message
+    
+    async def get_rag_context(self, query: str) -> str:
+        """Get RAG context for a query"""
+        context_docs = await self.search_documents(query)
+        return "\n\n".join([
+            f"From {doc['filename']}: {doc['content']}"
+            for doc in context_docs
+        ])
+    
+    async def stream_rag_response(
+        self, 
+        query: str,
+        context: str,
+        model_id: int,
+        session_id: str = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream RAG response"""
+        # Create messages for LLM
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful assistant. Use the provided context to answer questions. If the context doesn't contain relevant information, say so."
+            },
+            {
+                "role": "user", 
+                "content": f"Context:\n{context}\n\nQuestion: {query}"
+            }
+        ]
+        
+        # Stream response
+        full_response = ""
+        async for chunk in self.llm_service.stream_response(model_id, messages):
+            full_response += chunk
+            yield chunk
+        
+        # Save chat message after streaming is complete
+        try:
+            model = await self.llm_service.get_model(model_id)
+            model_name = f"{model.provider}/{model.model_name}" if model else "unknown"
+            
+            chat_message = ChatMessage(
+                session_id=session_id,
+                user_message=query,
+                ai_response=full_response,
+                model_used=model_name
+            )
+            self.db.add(chat_message)
+            await self.db.commit()
+        except Exception as e:
+            print(f"Error saving chat message: {e}")

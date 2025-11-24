@@ -30,6 +30,16 @@ dependencies = [
     "python-docx>=1.1.0",
     "unstructured>=0.11.0",
     "aiofiles>=23.2.0",
+    "langchain>=1.0.5",
+    "langchain-core>=1.0.4",
+    "langchain-community>=0.4.1",
+    "langchain-groq>=1.0.1",
+    "faiss-cpu>=1.12.0",
+    "langchain-text-splitters>=1.0.0",
+    "numpy>=2.3.4",
+    "ollama>=0.6.1",
+    "transformers>=4.57.1",
+    "torc>=0.1.1",
 ]
 
 [dependency-groups]

@@ -6,9 +6,12 @@ class Settings(BaseSettings):
     chroma_db_path: str = "./workspace/chromadb"
     storage_type: str = "local"
     storage_path: str = "./workspace/documents"
-    grok_api_key: Optional[str] = None
+    local_llm_model: str = "llama2"
+    local_llm_provider: str = "ollama"
     aws_bucket_name: Optional[str] = None
     aws_region: str = "us-east-1"
+    aws_bedrock_model: Optional[str] = None
+    aws_bedrock_enabled: bool = False
     azure_connection_string: Optional[str] = None
     environment: str = "development"
     debug: bool = True

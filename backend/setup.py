@@ -32,7 +32,7 @@ async def create_default_llm_model():
                 name="GROK Beta",
                 provider="openai",
                 model_name="grok-beta",
-                api_key=settings.grok_api_key,
+                api_key=settings.groq_api_key,
                 base_url="https://api.x.ai/v1",
                 is_active=True,
                 parameters={

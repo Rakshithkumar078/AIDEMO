@@ -38,6 +38,8 @@ class LocalStorageService(StorageService):
     
     async def get_file(self, file_path: str) -> bytes:
         full_path = os.path.join(self.base_path, file_path)
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"File not found: {full_path}")
         async with aiofiles.open(full_path, 'rb') as f:
             return await f.read()
     

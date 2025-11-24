@@ -1,0 +1,212 @@
+/* Document Upload Styles */
+
+.upload-drop-zone {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-drop-zone:hover {
+  border-color: var(--bs-primary) !important;
+  background-color: var(--bs-light) !important;
+}
+
+.upload-drop-zone.drag-over {
+  border-color: var(--bs-primary) !important;
+  background-color: var(--bs-primary-bg-subtle) !important;
+  transform: scale(1.02);
+}
+
+.file-list-item {
+  transition: all 0.2s ease;
+}
+
+.file-list-item:hover {
+  background-color: var(--bs-light);
+}
+
+.progress-stages {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.progress-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.progress-stage:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: -50%;
+  width: 100%;
+  height: 2px;
+  background-color: var(--bs-border-color);
+  z-index: 1;
+}
+
+.progress-stage.active::after {
+  background-color: var(--bs-primary);
+}
+
+.progress-stage.completed::after {
+  background-color: var(--bs-success);
+}
+
+.stage-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bs-light);
+  border: 2px solid var(--bs-border-color);
+  color: var(--bs-secondary);
+  font-size: 0.75rem;
+  z-index: 2;
+  position: relative;
+}
+
+.stage-icon.active {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: white;
+}
+
+.stage-icon.completed {
+  background-color: var(--bs-success);
+  border-color: var(--bs-success);
+  color: white;
+}
+
+.stage-icon.error {
+  background-color: var(--bs-danger);
+  border-color: var(--bs-danger);
+  color: white;
+}
+
+.stage-label {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  text-align: center;
+}
+
+.file-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.upload-progress-container {
+  background: var(--bs-light);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.upload-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--bs-light);
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.upload-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.upload-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.upload-stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.upload-stat-label {
+  font-size: 0.75rem;
+  color: var(--bs-secondary);
+  margin-top: 0.25rem;
+}
+
+/* Animation for progress bars */
+@keyframes progressPulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.progress-bar.uploading {
+  animation: progressPulse 1.5s ease-in-out infinite;
+}
+
+/* File type icons */
+.file-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .upload-drop-zone {
+    min-height: 100px !important;
+  }
+  
+  .upload-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .progress-stages {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .progress-stage:not(:last-child)::after {
+    display: none;
+  }
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .upload-drop-zone {
+  border-color: var(--bs-border-color);
+  background-color: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .upload-drop-zone:hover,
+[data-bs-theme="dark"] .upload-drop-zone.drag-over {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+[data-bs-theme="dark"] .file-list-item:hover {
+  background-color: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .upload-progress-container {
+  background: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .upload-summary {
+  background: var(--bs-dark);
+}

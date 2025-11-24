@@ -259,8 +259,8 @@ function SidebarNav() {
             )}
             <br />
              
-                {ProjectNameMenu().map((menu, i) => <NavItem key={i} menu={menu} />)}
-                <hr></hr>
+                {/*{ProjectNameMenu().map((menu, i) => <NavItem key={i} menu={menu} />)}*/}
+                {/*<hr></hr>*/}
                 {ProjectMenu().map((menu, i) => (
                     menu.path.startsWith('http') ? (
                         <div className='menu-item' key={i}>

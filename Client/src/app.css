@@ -12911,6 +12911,8 @@ fieldset:disabled .btn {
     border-bottom: var(--bs-modal-header-border-width) solid var(--bs-modal-header-border-color);
     border-top-left-radius: var(--bs-modal-inner-border-radius);
     border-top-right-radius: var(--bs-modal-inner-border-radius);
+    background-color: var(--bs-app-theme) !important;
+    border-radius: 20px 20px 0px 0px !important;
 }
 .modal-header .btn-close {
     padding: calc(var(--bs-modal-header-padding-y) * 0.5) calc(var(--bs-modal-header-padding-x) * 0.5);
@@ -12922,6 +12924,7 @@ fieldset:disabled .btn {
 .modal-title {
     margin-bottom: 0;
     line-height: var(--bs-modal-title-line-height);
+    color: var(--bs-app-theme-color) !important;
 }
 .modal-body {
     position: relative;
