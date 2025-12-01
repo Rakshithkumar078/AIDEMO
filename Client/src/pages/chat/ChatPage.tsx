@@ -10,6 +10,7 @@ const ChatPage: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
     const [sessionId] = useState(uuidv4());
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState('');
@@ -45,6 +46,7 @@ const ChatPage: React.FC = () => {
         setMessages(prev => [...prev, userMessage, assistantMessage]);
         setInputValue('');
         setIsLoading(true);
+        setLoadingStatus('Searching documents...');
 
         await streamChatMessage(
             {
@@ -65,6 +67,7 @@ const ChatPage: React.FC = () => {
                         : msg
                 ));
                 setIsLoading(false);
+                setLoadingStatus(null);
             },
             (error: string) => {
                 setMessages(prev => prev.map(msg =>
@@ -73,6 +76,7 @@ const ChatPage: React.FC = () => {
                         : msg
                 ));
                 setIsLoading(false);
+                setLoadingStatus(null);
             },
             (sources: any[]) => {
                 setMessages(prev => prev.map(msg =>
@@ -80,6 +84,9 @@ const ChatPage: React.FC = () => {
                         ? { ...msg, sources: sources }
                         : msg
                 ));
+            },
+            (status: string) => {
+                setLoadingStatus(status);
             }
         );
     };
@@ -130,6 +137,7 @@ const ChatPage: React.FC = () => {
 
         setMessages(prev => [...prev, assistantMessage]);
         setIsLoading(true);
+        setLoadingStatus('Searching documents...');
 
         await streamChatMessage(
             {
@@ -150,6 +158,7 @@ const ChatPage: React.FC = () => {
                         : msg
                 ));
                 setIsLoading(false);
+                setLoadingStatus(null);
             },
             (error: string) => {
                 setMessages(prev => prev.map(msg =>
@@ -158,6 +167,7 @@ const ChatPage: React.FC = () => {
                         : msg
                 ));
                 setIsLoading(false);
+                setLoadingStatus(null);
             },
             (sources: any[]) => {
                 setMessages(prev => prev.map(msg =>
@@ -165,6 +175,9 @@ const ChatPage: React.FC = () => {
                         ? { ...msg, sources: sources }
                         : msg
                 ));
+            },
+            (status: string) => {
+                setLoadingStatus(status);
             }
         );
     };
@@ -181,11 +194,26 @@ const ChatPage: React.FC = () => {
     const transformSources = (sources: any[]): SourceReference[] => {
         if (!sources || !Array.isArray(sources)) return [];
 
-        return sources.map(source => ({
+        // Deduplicate sources by document name, keeping the one with highest relevance
+        const uniqueSourcesMap = new Map<string, any>();
+
+        sources.forEach(source => {
+            const docName = source.source || source.filename;
+            if (!docName) return;
+
+            const existingSource = uniqueSourcesMap.get(docName);
+            const currentScore = source.relevance_score || source.confidence || 0;
+
+            if (!existingSource || currentScore > (existingSource.relevance_score || existingSource.confidence || 0)) {
+                uniqueSourcesMap.set(docName, source);
+            }
+        });
+
+        return Array.from(uniqueSourcesMap.values()).map(source => ({
             document: source.source || source.filename || 'Unknown Document',
             page: source.page || undefined,
             confidence: source.relevance_score || source.confidence || 0,
-            content: source.content || source.text || 'No content available'
+            content: source.preview || source.content || source.text || 'No content available'
         }));
     };
 
@@ -277,9 +305,14 @@ const ChatPage: React.FC = () => {
                                             <div>
                                                 <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
                                                 {message.isStreaming && (
-                                                    <span className="ms-1">
-                                                        <i className="fas fa-circle-notch fa-spin"></i>
-                                                    </span>
+                                                    <div className="d-flex align-items-center mt-2">
+                                                        <span className="me-2">
+                                                            <i className="fas fa-circle-notch fa-spin text-primary"></i>
+                                                        </span>
+                                                        {loadingStatus && !message.content && (
+                                                            <small className="text-muted">{loadingStatus}</small>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 {/* Use the enhanced SourceReferences component */}
                                                 {message.role === 'assistant' && message.sources && message.sources.length > 0 && !message.isStreaming && (

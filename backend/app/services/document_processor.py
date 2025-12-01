@@ -1,19 +1,18 @@
 from typing import List, Any, Dict
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from sentence_transformers import SentenceTransformer
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.document_loaders import Docx2txtLoader
 import numpy as np
-import faiss
 import pickle
 import os
 from pathlib import Path
+from app.utils.embedding_utils import get_embeddings
 
 class DocumentProcessor:
-    def __init__(self, embedding_model: str = "all-MiniLM-L6-v2", chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.model = SentenceTransformer(embedding_model)
+        self.embedding_model = get_embeddings()
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -41,11 +40,12 @@ class DocumentProcessor:
         chunks = self.splitter.split_documents(documents)
         return chunks
     
-    def embed_chunks(self, chunks: List[Any]) -> np.ndarray:
+    def embed_chunks(self, chunks: List[Any]) -> List[List[float]]:
         """Generate embeddings for chunks"""
         texts = [chunk.page_content for chunk in chunks]
-        embeddings = self.model.encode(texts)
-        return embeddings.astype('float32')
+        # OllamaEmbeddings.embed_documents returns List[List[float]]
+        embeddings = self.embedding_model.embed_documents(texts)
+        return embeddings
     
     def process_document(self, file_path: str, document_id: int) -> Dict[str, Any]:
         """Complete document processing pipeline"""

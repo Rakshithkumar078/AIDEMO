@@ -10,7 +10,8 @@ export const streamChatMessage = async (
     onChunk: (chunk: string) => void,
     onComplete: () => void,
     onError: (error: string) => void,
-    onSources?: (sources: any[]) => void
+    onSources?: (sources: any[]) => void,
+    onStatus?: (status: string) => void
 ) => {
     try {
         const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/v1/chat/stream`, {
@@ -35,9 +36,9 @@ export const streamChatMessage = async (
 
         while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) break;
-            
+
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
@@ -60,7 +61,9 @@ export const streamChatMessage = async (
                         if (data.type === 'sources' && data.sources && onSources) {
                             onSources(data.sources);
                         }
-                        // Skip search_complete events
+                        if (data.type === 'search_complete' && onStatus) {
+                            onStatus(`Found ${data.results_found} documents, generating answer...`);
+                        }
                     } catch (e) {
                         console.error('Error parsing SSE data:', e);
                     }

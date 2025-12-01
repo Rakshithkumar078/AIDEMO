@@ -9,6 +9,7 @@ from app.services.enhanced_rag_service import EnhancedRAGService
 from app.core.logger import logger
 import uuid
 import os
+import asyncio
 from typing import List, Optional
 
 class DocumentService:
@@ -62,7 +63,14 @@ class DocumentService:
             db_document.processing_message = "Generating embeddings..."
             await self.db.commit()
             
-            self.rag_service.process_document(temp_path, db_document.id)
+            # Run blocking RAG processing in a separate thread
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None,
+                self.rag_service.process_document,
+                temp_path,
+                db_document.id
+            )
             
             # Clean up temp file
             os.remove(temp_path)

@@ -22,7 +22,10 @@ class VectorStore:
         return collection_name
     
     async def add_documents(self, collection_name: str, documents: List[Dict[str, Any]]):
-        collection = self.client.get_collection(collection_name)
+        collection = self.client.get_collection(
+            name=collection_name,
+            embedding_function=self.embedding_function
+        )
         
         texts = [doc["content"] for doc in documents]
         metadatas = [{"chunk_id": i, **doc.get("metadata", {})} for i, doc in enumerate(documents)]
@@ -36,7 +39,10 @@ class VectorStore:
     
     async def search(self, collection_name: str, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
         try:
-            collection = self.client.get_collection(collection_name)
+            collection = self.client.get_collection(
+                name=collection_name,
+                embedding_function=self.embedding_function
+            )
             results = collection.query(
                 query_texts=[query],
                 n_results=n_results

@@ -1,12 +1,56 @@
 import os
 import asyncio
+import requests
+import json
 from typing import List, Dict, Any, AsyncGenerator
-from langchain_community.llms import Ollama
+# from langchain_community.llms import Ollama # Removed due to stability issues
 from app.services.amazon_q_service import AmazonQService
 from app.services.vector_service import VectorService
 from app.services.document_processor import DocumentProcessor
 from app.core.logger import logger
 from app.core.config import settings
+
+class SimpleOllama:
+    def __init__(self, base_url: str, model: str):
+        self.base_url = base_url
+        self.model = model
+
+    def invoke(self, prompt: str) -> str:
+        url = f"{self.base_url}/api/generate"
+        data = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False
+        }
+        try:
+            response = requests.post(url, json=data)
+            response.raise_for_status()
+            return response.json().get("response", "")
+        except Exception as e:
+            logger.error(f"SimpleOllama invoke failed: {e}")
+            raise
+
+    def stream(self, prompt: str):
+        url = f"{self.base_url}/api/generate"
+        data = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": True
+        }
+        try:
+            response = requests.post(url, json=data, stream=True)
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if line:
+                    body = json.loads(line)
+                    response_part = body.get("response", "")
+                    if response_part:
+                        yield response_part
+                    if body.get("done", False):
+                        break
+        except Exception as e:
+            logger.error(f"SimpleOllama stream failed: {e}")
+            raise
 
 class EnhancedRAGService:
     def __init__(self):
@@ -24,11 +68,11 @@ class EnhancedRAGService:
                 raise
         else:
             try:
-                self.llm = Ollama(
+                self.llm = SimpleOllama(
                     model=settings.local_llm_model,
                     base_url="http://localhost:11434"
                 )
-                logger.info(f"Local LLM initialized: {settings.local_llm_model}")
+                logger.info(f"Local LLM initialized (SimpleOllama): {settings.local_llm_model}")
             except Exception as e:
                 logger.error(f"Failed to initialize local LLM: {e}")
                 raise
@@ -68,34 +112,33 @@ class EnhancedRAGService:
 
         if not results:
             logger.warning("No relevant context found for query")
-            return {'answer': 'No relevant context found.', 'sources': [], 'confidence': 0.0, 'context': ''}
+            return {'answer': 'I could not find any relevant information in the uploaded documents to answer your question.', 'sources': [], 'confidence': 0.0, 'context': ''}
 
         # Prepare context and sources
-        context = "\n\n".join([doc['text'] for doc in results])
-        sources = [{
-            'source': doc.get('source', 'unknown').split('/')[-1],
-            'page': 'unknown',
-            'score': 1 - (doc['distance'] / 2),
-            'preview': doc['text'][:300] + '...'
-        } for doc in results]
-        confidence = max([1 - (doc['distance'] / 2) for doc in results])
-
-        # If confidence is low, fallback to inference with disclaimer
-        if confidence < min_score:
-            disclaimer = "No explicit mention found. Inference: PearlArc appears to prioritize employees via equal opportunities, anti-discrimination, fair recruitment and promotion, and supportive workplace policies."
-            answer = f"{disclaimer}\n\nBased on the retrieved documents:\n\n"
-            for i, source in enumerate(sources, 1):
-                answer += f"[{i}] {source['preview']}\n\n"
-            answer += f"\nThis information comes from {len(sources)} low-confidence document(s) with confidence score: {confidence:.2f}"
-            return {
-                'answer': answer,
-                'sources': sources,
-                'confidence': confidence,
-                'context': context if return_context else None
-            }
+        context_parts = []
+        for i, doc in enumerate(results):
+            context_parts.append(f"<document id='{i+1}'>\n{doc['text']}\n</document>")
+        context = "\n\n".join(context_parts)
+        
+        # Use 1 / (1 + distance / 100) for score calculation to handle non-normalized embeddings
+        sources = []
+        for doc in results:
+            dist = doc['distance']
+            score = 1.0 / (1.0 + (dist / 100.0))
+            logger.info(f"Doc: {doc.get('source', 'unknown')}, Dist: {dist}, Score: {score}")
+            sources.append({
+                'source': doc.get('source', 'unknown').split('/')[-1],
+                'page': 'unknown',
+                'score': score,
+                'preview': doc['text'][:300] + '...'
+            })
+        confidence = max([s['score'] for s in sources]) if sources else 0.0
 
         # Generate answer with configured LLM
-        prompt = f"""Use the following context to answer the question concisely.
+        prompt = f"""You are a helpful AI assistant. Answer the question based ONLY on the following provided context.
+If the answer is not in the context, say "I cannot answer this based on the provided documents."
+Do not use outside knowledge.
+
 Context:
 {context}
 
@@ -107,18 +150,15 @@ Answer:"""
             if isinstance(self.llm, AmazonQService):
                 response_text = self.llm.generate(prompt)
             else:
-                # LangChain-based LLM.
-                response = self.llm.invoke(prompt)
-                # Each LLM wrapper uses different attribute names for text
-                response_text = getattr(response, 'content', None) or str(response)
+                # SimpleOllama
+                response_text = self.llm.invoke(prompt)
             logger.info("LLM response generated successfully")
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
-            # Generate intelligent fallback from context
-            answer = f"Based on the retrieved documents:\n\n"
+            # Generic fallback
+            answer = f"I encountered an error generating the response, but here is the relevant information found:\n\n"
             for i, source in enumerate(sources, 1):
                 answer += f"[{i}] {source['preview']}\n\n"
-            answer += f"\nThis information comes from {len(sources)} relevant document(s) with confidence score: {confidence:.2f}"
             return {
                 'answer': answer,
                 'sources': sources,
@@ -158,15 +198,21 @@ Answer:"""
         sources = []
         
         for i, result in enumerate(search_results):
-            context_parts.append(result['text'])
+            context_parts.append(f"<document id='{i+1}'>\n{result['text']}\n</document>")
             filename = result.get("source", "").split('/')[-1]
             if '_' in filename:
                 filename = filename.split('_', 1)[1]  # Remove UUID prefix
+            
+            # Use 1 / (1 + distance / 100) for score calculation
+            dist = result["distance"]
+            score = 1.0 / (1.0 + (dist / 100.0))
+            logger.info(f"Stream Doc: {filename}, Dist: {dist}, Score: {score}")
+            
             sources.append({
-                "document_id": result["document_id"],
-                "chunk_id": result["chunk_id"],
+                "document_id": result.get("document_id"),
+                "chunk_id": result.get("chunk_id"),
                 "source": filename,
-                "relevance_score": 1 - (result["distance"] / 2),
+                "relevance_score": score,
                 "preview": result['text'][:200] + "..." if len(result['text']) > 200 else result['text']
             })
         
@@ -179,7 +225,9 @@ Answer:"""
         }
         
         # Generate streaming response
-        prompt = f"""Based on the following context, answer the question. Include reference numbers [1], [2], etc. when citing specific information.
+        prompt = f"""You are a helpful AI assistant. Answer the question based ONLY on the following provided context.
+If the answer is not in the context, say "I cannot answer this based on the provided documents."
+Include reference numbers [1], [2], etc. when citing specific information.
 
 Context:
 {context}
@@ -197,7 +245,7 @@ Answer:"""
                         "content": chunk
                     }
             else:
-                # LangChain or other wrapper
+                # SimpleOllama
                 stream = self.llm.stream(prompt)
                 for chunk in stream:
                     yield {
